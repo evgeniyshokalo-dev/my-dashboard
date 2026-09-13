@@ -184,6 +184,15 @@
   .done-list{ display:flex; flex-direction:column; gap:8px; }
   .done-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#fffdf6; border:1px solid #ecdfbc; border-radius:8px; font-size:13px; }
   .done-row .dur{ font-weight:700; padding:3px 9px; border-radius:20px; font-size:12px; color:#fff; }
+  .filters{ display:flex; flex-wrap:wrap; gap:10px; align-items:end; background:var(--panel); border-radius:12px; padding:16px; }
+  .filter-field{ display:flex; flex-direction:column; gap:5px; min-width:155px; flex:1; }
+  .filter-field label{ font-size:12px; font-weight:600; color:var(--ink-soft); }
+  .search-input{ width:100%; font-family:'Inter'; font-size:14px; padding:9px 10px; border-radius:7px; border:1px solid #ddd0b0; background:#fffdf6; color:var(--ink); outline:none; }
+  .archive-row{ display:flex; align-items:center; gap:12px; padding:12px; background:#fffdf6; border:1px solid #ecdfbc; border-radius:8px; }
+  .archive-row-main{ min-width:0; flex:1; }
+  .archive-row-title{ font-weight:700; word-break:break-word; }
+  .archive-row-meta{ color:var(--ink-soft); font-size:12px; margin-top:4px; }
+  .restore-btn{ border:none; border-radius:7px; padding:7px 10px; background:#e8dcc0; color:var(--ink); font-weight:600; cursor:pointer; white-space:nowrap; }
 
   .loading{ color:#e8dcc0; text-align:center; padding:60px 0; font-family:'Caveat'; font-size:22px; }
   .setup-modal{ max-width:590px; }
@@ -198,6 +207,7 @@
     .title-block h1{ font-size:34px; }
     .board{ flex-direction:column; }
     .account-name{ display:none; }
+    .filters{ align-items:stretch; }
   }
 </style>
 </head>
@@ -225,6 +235,11 @@ let openTaskId = null;
 let isNewTask = false;
 let settingsOpen = false;
 let syncMessage = '';
+let archiveSearch = '';
+let archiveFrom = '';
+let archiveTo = '';
+let analyticsFrom = '';
+let analyticsTo = '';
 let firebase = { app:null, auth:null, db:null, user:null, unsubscribe:null, ready:false };
 
 const PRIORITIES = {
@@ -249,6 +264,34 @@ function hashRotate(id){
 
 function daysBetween(a,b){
   return Math.round((b - a) / (1000*60*60*24));
+}
+
+function startOfCurrentWeek(){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); // Monday
+  return d;
+}
+
+function archivePastWeekTasks(){
+  const weekStart = startOfCurrentWeek();
+  let changed = false;
+  tasks.forEach(t => {
+    if(t.status === 'done' && !t.archivedAt && t.completedAt && new Date(t.completedAt) < weekStart){
+      t.archivedAt = new Date().toISOString();
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function isInDateRange(dateValue, from, to){
+  if(!dateValue) return false;
+  const date = new Date(dateValue); date.setHours(0,0,0,0);
+  if(from){ const start = new Date(from); start.setHours(0,0,0,0); if(date < start) return false; }
+  if(to){ const end = new Date(to); end.setHours(23,59,59,999); if(date > end) return false; }
+  return true;
 }
 
 function lerp(a,b,t){ return a + (b-a)*t; }
@@ -310,8 +353,10 @@ async function loadTasks(){
   }catch(e){
     // Local browser storage remains available if the original host storage is absent.
   }
+  const archived = archivePastWeekTasks();
   loaded = true;
   render();
+  if(archived) saveTasks();
   const config = getFirebaseConfig();
   if(config) initializeFirebase(config);
 }
@@ -378,8 +423,10 @@ async function handleAuthChange(user){
   firebase.unsubscribe = onSnapshot(boardRef, async snapshot => {
     if(snapshot.exists() && Array.isArray(snapshot.data().tasks)){
       tasks = snapshot.data().tasks;
+      const archived = archivePastWeekTasks();
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
       syncMessage = 'Синхронізовано';
+      if(archived) saveTasks();
     }else{
       await setDoc(boardRef, { tasks, updatedAt: serverTimestamp(), schemaVersion: 1 });
       syncMessage = 'Першу копію завдань збережено у хмарі';
@@ -725,9 +772,34 @@ function accountControls(){
   </div>`;
 }
 
+// Запам'ятовує, яке текстове поле в фокусі (і позицію курсора в ньому),
+// щоб повернути фокус на місце після перемальовки innerHTML.
+function captureFocus(app){
+  const el = document.activeElement;
+  if(!el || !app.contains(el)) return null;
+  if(el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return null;
+  const cls = (el.className || '').trim().split(/\s+/).filter(Boolean);
+  const selector = el.tagName === 'TEXTAREA' ? 'textarea' : (cls.length ? '.'+cls.join('.') : el.tagName.toLowerCase());
+  let start = null, end = null;
+  try { start = el.selectionStart; end = el.selectionEnd; } catch(e) {}
+  return { selector, start, end };
+}
+
+function restoreFocus(app, state){
+  if(!state) return;
+  const el = app.querySelector(state.selector);
+  if(!el) return;
+  el.focus();
+  if(state.start !== null && typeof el.setSelectionRange === 'function'){
+    try { el.setSelectionRange(state.start, state.end); } catch(e) {}
+  }
+}
+
 function render(){
   const app = document.getElementById('app');
   if(!loaded){ app.innerHTML = '<div class="loading">Дістаю дошку зі старої шафи…</div>'; return; }
+
+  const focusState = captureFocus(app);
 
   app.innerHTML = `
     <div class="header">
@@ -752,6 +824,8 @@ function render(){
     ${renderModal()}
     ${renderSettingsModal()}
   `;
+
+  restoreFocus(app, focusState);
 }
 
 function setTab(tab){ activeTab = tab; render(); }
