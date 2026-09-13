@@ -211,7 +211,7 @@ const FIREBASE_CONFIG_KEY = 'task-board-firebase-config';
 // Firebase configuration is safe to expose in a web page. You can also add it here
 // after creating the project, instead of entering it through the Settings window.
 const BUILT_IN_FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyCoRiKUpRGUp0oa4qgQPncoOyDhrQeCEdM',
+  apiKey: 'AIzaSyCoRiKUpRGUpOoa4qgQPncoOyDhrQeCEdM',
   authDomain: 'my-dashboard-a1789.firebaseapp.com',
   projectId: 'my-dashboard-a1789',
   storageBucket: 'my-dashboard-a1789.firebasestorage.app',
@@ -393,6 +393,11 @@ async function handleAuthChange(user){
 }
 
 async function signIn(){
+  if(location.protocol === 'file:'){
+    syncMessage = 'Для входу відкрийте дошку за вебпосиланням GitHub Pages, а не локальний файл.';
+    render();
+    return;
+  }
   if(!firebase.ready){ settingsOpen = true; render(); return; }
   try{
     const provider = new firebase.authApi.GoogleAuthProvider();
@@ -402,7 +407,9 @@ async function signIn(){
       await firebase.authApi.signInWithRedirect(firebase.auth, new firebase.authApi.GoogleAuthProvider());
     }else{
       console.error('Помилка входу', e);
-      syncMessage = 'Вхід не виконано. Перевірте дозволений домен у Firebase.';
+      syncMessage = e.code === 'auth/unauthorized-domain'
+        ? 'Ця вебадреса ще не дозволена у Firebase.'
+        : 'Вхід не виконано. Спробуйте ще раз.';
       render();
     }
   }
@@ -507,6 +514,10 @@ function escapeHtml(s){
   const d = document.createElement('div');
   d.innerText = s;
   return d.innerHTML;
+}
+
+function escapeTextarea(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function renderBoard(){
@@ -686,7 +697,7 @@ function renderSettingsModal(){
           У Firebase увімкніть <b>Authentication → Google</b> і створіть <b>Firestore Database</b>. У налаштуваннях проєкту відкрийте «Ваші застосунки» → Web → Config і скопіюйте весь об’єкт <b>firebaseConfig</b> разом із фігурними дужками.
         </div>
         <div class="field-label">Об’єкт firebaseConfig</div>
-        <textarea id="firebase-config-input" placeholder='{"apiKey":"…","authDomain":"…","projectId":"…"}'>${escapeHtml(configText)}</textarea>
+        <textarea id="firebase-config-input" placeholder='{"apiKey":"…","authDomain":"…","projectId":"…"}'>${escapeTextarea(configText)}</textarea>
         <div id="config-error" style="color:#a5473e;font-size:12px;margin-top:7px;"></div>
         <div class="setup-actions">
           <button class="secondary-btn" onclick="closeSettings()">Скасувати</button>
