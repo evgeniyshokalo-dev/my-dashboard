@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мій куточок завдань</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#2b2118;
+    --ink-soft:#5a4d3f;
+    --cork-1:#4a3323;
+    --cork-2:#2f2015;
+    --paper-cream:#fbf3d9;
+    --paper-shadow: rgba(30,18,8,.35);
+    --gold:#c9a15a;
+    --p1:#4caa7d;   /* низький */
+    --p2:#3f9e9a;   /* середній */
+    --p3:#3f7fc7;   /* високий */
+    --p4:#2c4e9e;   /* критичний */
+    --panel:#f5efe0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 10% 15%, rgba(0,0,0,.15) 0, transparent 3%),
+      radial-gradient(circle at 30% 60%, rgba(0,0,0,.12) 0, transparent 3%),
+      radial-gradient(circle at 70% 25%, rgba(0,0,0,.12) 0, transparent 3%),
+      radial-gradient(circle at 85% 75%, rgba(0,0,0,.15) 0, transparent 3%),
+      radial-gradient(circle at 50% 90%, rgba(0,0,0,.1) 0, transparent 3%),
+      linear-gradient(160deg, var(--cork-1), var(--cork-2));
+    min-height:100vh;
+  }
+  #app{ max-width:1180px; margin:0 auto; padding:20px 20px 60px; }
+
+  /* Header */
+  .header{ display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:18px; }
+  .title-block h1{
+    font-family:'Caveat',cursive; font-weight:700; font-size:44px; line-height:1;
+    color:#fbf3d9; margin:0; text-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+  .title-block p{ margin:4px 0 0; color:#cbb99a; font-size:14px; }
+
+  .tabs{ display:flex; gap:8px; }
+  .tab-btn{
+    font-family:'Inter'; font-weight:600; font-size:14px; padding:9px 16px;
+    background:rgba(255,255,255,.08); color:#e8dcc0; border:1px solid rgba(255,255,255,.15);
+    border-radius:8px; cursor:pointer; transition:background .15s ease;
+  }
+  .tab-btn:hover{ background:rgba(255,255,255,.16); }
+  .tab-btn.active{ background:var(--gold); color:#2b2118; border-color:var(--gold); }
+
+  .new-btn{
+    font-family:'Inter'; font-weight:600; font-size:14px; padding:10px 18px;
+    background:var(--gold); color:#2b2118; border:none; border-radius:8px; cursor:pointer;
+    box-shadow:0 3px 0 #8a6e35; transition:transform .1s ease;
+  }
+  .new-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 #8a6e35; }
+  .account-actions{ display:flex; align-items:center; gap:8px; }
+  .account-btn{
+    font-family:'Inter'; font-weight:600; font-size:13px; padding:9px 12px; cursor:pointer;
+    color:#f1e7cf; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:8px;
+  }
+  .account-btn:hover{ background:rgba(255,255,255,.16); }
+  .account-btn.connected{ border-color:#79b892; color:#d7f0df; }
+  .account-name{ color:#d7e9d8; font-size:12px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* Stats ribbon */
+  .ribbon{
+    display:flex; gap:10px; flex-wrap:wrap; margin-bottom:26px;
+  }
+  .chip{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+    border-radius:10px; padding:10px 16px; color:#f1e7cf; min-width:110px;
+  }
+  .chip b{ display:block; font-size:22px; font-family:'Inter'; font-weight:700; }
+  .chip span{ font-size:12px; color:#c9bb9d; }
+
+  /* Board columns */
+  .board{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+  .column{ flex:1 1 300px; min-width:280px; }
+  .column-head{
+    display:flex; align-items:center; gap:8px; margin-bottom:12px; padding-bottom:6px;
+    border-bottom:2px dashed rgba(255,255,255,.2);
+  }
+  .column-head .dot{ width:9px; height:9px; border-radius:50%; }
+  .column-head h2{ font-family:'Inter'; font-size:13px; text-transform:none; letter-spacing:.02em; color:#e8dcc0; font-weight:600; margin:0; }
+  .column-head .count{ margin-left:auto; color:#a9997a; font-size:12px; }
+
+  .notes-wrap{ display:flex; flex-direction:column; gap:16px; min-height:60px; }
+  .empty-col{ color:#8a7a5f; font-size:13px; font-style:italic; padding:10px 4px; }
+
+  /* Sticky note */
+  .note{
+    position:relative; background:var(--paper-cream);
+    border-radius:3px 3px 6px 6px; padding:16px 14px 12px;
+    box-shadow:0 8px 14px var(--paper-shadow), 0 1px 0 rgba(255,255,255,.4) inset;
+    cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .note:hover{ transform:translateY(-3px) rotate(0deg) !important; box-shadow:0 14px 20px var(--paper-shadow); }
+  .note-tape{
+    position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    width:56px; height:16px; border-radius:2px; opacity:.9;
+    box-shadow:0 2px 3px rgba(0,0,0,.25);
+  }
+  .note-bar{ position:absolute; top:0; left:0; right:0; height:6px; border-radius:3px 3px 0 0; }
+  .note-title{
+    font-family:'Caveat',cursive; font-weight:700; font-size:23px; line-height:1.15;
+    margin:8px 0 8px; word-break:break-word;
+  }
+  .note-meta{ display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--ink-soft); }
+  .note-due{ display:flex; align-items:center; gap:4px; }
+  .note-comments{ display:flex; align-items:center; gap:4px; color:var(--ink-soft); }
+  .note.done{ opacity:.75; }
+  .note.done .note-title{ text-decoration:line-through; text-decoration-color:#6b8f6b; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,10,5,.55); display:flex;
+    align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .modal{
+    background:var(--panel); width:100%; max-width:480px; border-radius:10px;
+    padding:22px 22px 18px; box-shadow:0 20px 50px rgba(0,0,0,.5);
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;}
+  .close-x{ background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:20px; line-height:1; padding:2px; }
+  .field-label{ font-size:12px; font-weight:600; color:var(--ink-soft); margin:14px 0 6px; text-transform:none; }
+  .title-input{
+    font-family:'Caveat',cursive; font-weight:700; font-size:28px; border:none; background:transparent;
+    width:100%; outline:none; border-bottom:2px solid transparent; padding-bottom:4px;
+  }
+  .title-input:focus{ border-bottom:2px solid var(--gold); }
+  textarea, .date-input, select{
+    width:100%; font-family:'Inter'; font-size:14px; padding:9px 10px; border-radius:7px;
+    border:1px solid #ddd0b0; background:#fffdf6; color:var(--ink); outline:none;
+  }
+  textarea{ min-height:80px; resize:vertical; }
+  .row2{ display:flex; gap:10px; }
+  .row2 > div{ flex:1; }
+
+  .status-pills{ display:flex; gap:6px; }
+  .status-pill{
+    flex:1; padding:8px 4px; text-align:center; border-radius:7px; font-size:13px; font-weight:600;
+    border:1px solid #ddd0b0; background:#fffdf6; cursor:pointer; color:var(--ink-soft);
+  }
+  .status-pill.active{ background:var(--ink); color:#fbf3d9; border-color:var(--ink); }
+
+  .priority-row{ display:flex; gap:10px; }
+  .p-swatch{
+    width:34px; height:34px; border-radius:50%; cursor:pointer; border:3px solid transparent;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:700;
+  }
+  .p-swatch.active{ border-color:var(--ink); transform:scale(1.08); }
+
+  .meta-footer{ display:flex; justify-content:space-between; font-size:11px; color:#9a8b6d; margin-top:16px; }
+  .modal-actions{ display:flex; justify-content:space-between; align-items:center; margin-top:18px; }
+  .del-btn{ background:none; border:none; color:#a5473e; font-size:13px; cursor:pointer; font-weight:600; }
+  .done-btn{ background:var(--gold); border:none; padding:9px 18px; border-radius:7px; font-weight:700; cursor:pointer; color:#2b2118; }
+
+  /* Analytics */
+  .analytics{ display:flex; flex-direction:column; gap:22px; }
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat-card{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:10px;
+    padding:16px; color:#f1e7cf;
+  }
+  .stat-card b{ display:block; font-size:28px; font-weight:700; }
+  .stat-card span{ font-size:12px; color:#c9bb9d; }
+
+  .panel-box{ background:var(--panel); border-radius:12px; padding:20px; }
+  .panel-box h3{ margin:0 0 16px; font-family:'Inter'; font-size:15px; color:var(--ink); }
+  .chart{ display:flex; align-items:flex-end; gap:10px; height:150px; padding:0 4px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .bar{ width:100%; max-width:34px; background:var(--gold); border-radius:4px 4px 0 0; min-height:2px; }
+  .bar-label{ font-size:11px; color:var(--ink-soft); }
+  .bar-value{ font-size:11px; font-weight:700; color:var(--ink); }
+
+  .done-list{ display:flex; flex-direction:column; gap:8px; }
+  .done-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#fffdf6; border:1px solid #ecdfbc; border-radius:8px; font-size:13px; }
+  .done-row .dur{ font-weight:700; padding:3px 9px; border-radius:20px; font-size:12px; color:#fff; }
+
+  .loading{ color:#e8dcc0; text-align:center; padding:60px 0; font-family:'Caveat'; font-size:22px; }
+  .setup-modal{ max-width:590px; }
+  .setup-modal h2{ margin:0; font-family:'Caveat',cursive; font-size:30px; }
+  .setup-modal p{ color:var(--ink-soft); font-size:13px; line-height:1.5; }
+  .setup-modal textarea{ min-height:150px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+  .notice{ padding:10px 12px; border-radius:7px; background:#fff7db; border:1px solid #e7d5a2; font-size:12px; color:#665126; line-height:1.45; }
+  .setup-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .secondary-btn{ background:#e8dcc0; border:none; padding:9px 14px; border-radius:7px; font-weight:600; cursor:pointer; color:var(--ink); }
+
+  @media (max-width:640px){
+    .title-block h1{ font-size:34px; }
+    .board{ flex-direction:column; }
+    .account-name{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Дістаю дошку зі старої шафи…</div></div>
+
+<script>
+const STORAGE_KEY = 'tasks-v1';
+const LOCAL_STORAGE_KEY = 'task-board-tasks-v2';
+const FIREBASE_CONFIG_KEY = 'task-board-firebase-config';
+// Firebase configuration is safe to expose in a web page. You can also add it here
+// after creating the project, instead of entering it through the Settings window.
+const BUILT_IN_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCoRiKUpRGUp0oa4qgQPncoOyDhrQeCEdM',
+  authDomain: 'my-dashboard-a1789.firebaseapp.com',
+  projectId: 'my-dashboard-a1789',
+  storageBucket: 'my-dashboard-a1789.firebasestorage.app',
+  messagingSenderId: '44060909408',
+  appId: '1:44060909408:web:59cd80c8f87ae7b2f24805'
+};
+let tasks = [];
+let loaded = false;
+let activeTab = 'board';
+let openTaskId = null;
+let isNewTask = false;
+let settingsOpen = false;
+let syncMessage = '';
+let firebase = { app:null, auth:null, db:null, user:null, unsubscribe:null, ready:false };
+
+const PRIORITIES = {
+  1:{label:'Низький', color:'#4caa7d'},
+  2:{label:'Середній', color:'#3f9e9a'},
+  3:{label:'Високий', color:'#3f7fc7'},
+  4:{label:'Критичний', color:'#2c4e9e'}
+};
+const STATUSES = [
+  {key:'todo', label:'До виконання', dot:'#c9a15a'},
+  {key:'inprogress', label:'В процесі', dot:'#3f9e9a'},
+  {key:'done', label:'Завершено', dot:'#4caa7d'}
+];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function hashRotate(id){
+  let h = 0;
+  for(let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) % 1000;
+  return ((h % 7) - 3) * 0.8; // -2.4deg .. 2.4deg
+}
+
+function daysBetween(a,b){
+  return Math.round((b - a) / (1000*60*60*24));
+}
+
+function lerp(a,b,t){ return a + (b-a)*t; }
+function lerpColor(c1,c2,t){
+  return [
+    Math.round(lerp(c1[0],c2[0],t)),
+    Math.round(lerp(c1[1],c2[1],t)),
+    Math.round(lerp(c1[2],c2[2],t))
+  ];
+}
+
+function colorForDueDate(dueDateStr, status){
+  const cream = [251,243,217];
+  if(status === 'done' || !dueDateStr) return `rgb(${cream.join(',')})`;
+  const peach = [244,196,110];
+  const coral = [230,140,90];
+  const red   = [199,76,58];
+  const maroon= [128,44,40];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueDateStr); due.setHours(0,0,0,0);
+  const d = daysBetween(today, due); // days left (negative = overdue)
+
+  let stops = [
+    {d:14, c:cream},
+    {d:5,  c:peach},
+    {d:1,  c:coral},
+    {d:0,  c:red},
+    {d:-14,c:maroon}
+  ];
+  if(d >= stops[0].d) return `rgb(${cream.join(',')})`;
+  if(d <= stops[stops.length-1].d) return `rgb(${maroon.join(',')})`;
+  for(let i=0;i<stops.length-1;i++){
+    const s1 = stops[i], s2 = stops[i+1];
+    if(d <= s1.d && d >= s2.d){
+      const t = (s1.d - d) / (s1.d - s2.d);
+      return `rgb(${lerpColor(s1.c, s2.c, t).join(',')})`;
+    }
+  }
+  return `rgb(${cream.join(',')})`;
+}
+
+function fmtDate(str){
+  if(!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+
+async function loadTasks(){
+  const local = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if(local){
+    try { tasks = JSON.parse(local); } catch(e) { tasks = []; }
+  }
+  try{
+    if(!local && window.storage){
+      const res = await window.storage.get(STORAGE_KEY, false);
+      tasks = res && res.value ? JSON.parse(res.value) : [];
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
+    }
+  }catch(e){
+    // Local browser storage remains available if the original host storage is absent.
+  }
+  loaded = true;
+  render();
+  const config = getFirebaseConfig();
+  if(config) initializeFirebase(config);
+}
+
+async function saveTasks(){
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
+  try{
+    if(window.storage) await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
+  }catch(e){
+    console.warn('Локальне сховище середовища недоступне', e);
+  }
+  if(firebase.db && firebase.user){
+    try{
+      const { doc, setDoc, serverTimestamp } = firebase.firestore;
+      await setDoc(doc(firebase.db, 'taskBoards', firebase.user.uid), {
+        tasks, updatedAt: serverTimestamp(), schemaVersion: 1
+      }, {merge:true});
+      syncMessage = 'Усі зміни синхронізовано';
+    }catch(e){
+      console.error('Помилка синхронізації', e);
+      syncMessage = 'Зміни збережено на цьому пристрої; хмара недоступна';
+    }
+  }
+}
+
+function getFirebaseConfig(){
+  if(BUILT_IN_FIREBASE_CONFIG) return BUILT_IN_FIREBASE_CONFIG;
+  try { return JSON.parse(localStorage.getItem(FIREBASE_CONFIG_KEY) || 'null'); }
+  catch(e) { return null; }
+}
+
+async function initializeFirebase(config){
+  if(firebase.ready) return;
+  try{
+    const [appSdk, authSdk, firestoreSdk] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js')
+    ]);
+    firebase.app = appSdk.initializeApp(config);
+    firebase.auth = authSdk.getAuth(firebase.app);
+    firebase.db = firestoreSdk.getFirestore(firebase.app);
+    firebase.authApi = authSdk;
+    firebase.firestore = firestoreSdk;
+    firebase.ready = true;
+    authSdk.onAuthStateChanged(firebase.auth, handleAuthChange);
+    syncMessage = 'Готово до входу через Google';
+  }catch(e){
+    console.error('Firebase не підключено', e);
+    syncMessage = 'Не вдалося підключити Firebase. Перевірте налаштування.';
+    render();
+  }
+}
+
+async function handleAuthChange(user){
+  firebase.user = user;
+  if(firebase.unsubscribe){ firebase.unsubscribe(); firebase.unsubscribe = null; }
+  if(!user){ syncMessage = firebase.ready ? 'Увійдіть, щоб синхронізувати завдання' : syncMessage; render(); return; }
+
+  syncMessage = 'Завантажую вашу дошку…';
+  render();
+  const { doc, onSnapshot, setDoc, serverTimestamp } = firebase.firestore;
+  const boardRef = doc(firebase.db, 'taskBoards', user.uid);
+  firebase.unsubscribe = onSnapshot(boardRef, async snapshot => {
+    if(snapshot.exists() && Array.isArray(snapshot.data().tasks)){
+      tasks = snapshot.data().tasks;
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
+      syncMessage = 'Синхронізовано';
+    }else{
+      await setDoc(boardRef, { tasks, updatedAt: serverTimestamp(), schemaVersion: 1 });
+      syncMessage = 'Першу копію завдань збережено у хмарі';
+    }
+    render();
+  }, error => {
+    console.error('Не вдалося завантажити дошку', error);
+    syncMessage = 'Не вдалося завантажити хмарні дані';
+    render();
+  });
+}
+
+async function signIn(){
+  if(!firebase.ready){ settingsOpen = true; render(); return; }
+  try{
+    const provider = new firebase.authApi.GoogleAuthProvider();
+    await firebase.authApi.signInWithPopup(firebase.auth, provider);
+  }catch(e){
+    if(e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request'){
+      await firebase.authApi.signInWithRedirect(firebase.auth, new firebase.authApi.GoogleAuthProvider());
+    }else{
+      console.error('Помилка входу', e);
+      syncMessage = 'Вхід не виконано. Перевірте дозволений домен у Firebase.';
+      render();
+    }
+  }
+}
+
+async function signOut(){
+  if(firebase.auth) await firebase.authApi.signOut(firebase.auth);
+}
+
+async function saveFirebaseConfig(){
+  const value = document.getElementById('firebase-config-input').value.trim();
+  try{
+    // Firebase displays this as a JavaScript object, not always strict JSON.
+    const objectText = value.replace(/^\s*(?:const|let|var)\s+firebaseConfig\s*=\s*/, '').replace(/;\s*$/, '');
+    const config = Function(`"use strict"; return (${objectText});`)();
+    if(!config.apiKey || !config.authDomain || !config.projectId) throw new Error('Неповна конфігурація');
+    localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+    settingsOpen = false;
+    syncMessage = 'Firebase налаштовано. Тепер увійдіть через Google.';
+    await initializeFirebase(config);
+    render();
+  }catch(e){
+    const error = document.getElementById('config-error');
+    error.textContent = 'Не вдалося прочитати конфігурацію. Вставте об’єкт firebaseConfig із Firebase.';
+  }
+}
+
+function createTask(){
+  const t = {
+    id: uid(),
+    title: 'Нове завдання',
+    description: '',
+    status: 'todo',
+    priority: 2,
+    dueDate: '',
+    createdAt: new Date().toISOString(),
+    completedAt: null
+  };
+  tasks.unshift(t);
+  openTaskId = t.id;
+  isNewTask = true;
+  render();
+}
+
+function updateTask(id, patch){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  Object.assign(t, patch);
+  if(patch.status === 'done' && !t.completedAt){ t.completedAt = new Date().toISOString(); }
+  if(patch.status && patch.status !== 'done'){ t.completedAt = null; }
+  saveTasks();
+  render();
+}
+
+// For text fields: mutate data + debounce save WITHOUT re-rendering the DOM,
+// so the input never loses focus while typing.
+let saveTimer = null;
+function updateTaskSilent(id, patch){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  Object.assign(t, patch);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveTasks, 400);
+}
+
+function deleteTask(id){
+  tasks = tasks.filter(x=>x.id!==id);
+  openTaskId = null;
+  saveTasks();
+  render();
+}
+
+function openTask(id){ openTaskId = id; isNewTask = false; render(); }
+function closeModal(){
+  clearTimeout(saveTimer);
+  saveTasks();
+  openTaskId = null;
+  isNewTask = false;
+  render();
+}
+
+function noteHTML(t){
+  const bg = colorForDueDate(t.dueDate, t.status);
+  const rot = hashRotate(t.id);
+  const pr = PRIORITIES[t.priority];
+  const dueLabel = t.dueDate ? fmtDate(t.dueDate) : 'без дати';
+  const doneClass = t.status === 'done' ? 'done' : '';
+  return `
+    <div class="note ${doneClass}" style="background:${bg}; transform:rotate(${rot}deg);" onclick="openTask('${t.id}')">
+      <div class="note-tape" style="background:${pr.color}cc;"></div>
+      <div class="note-bar" style="background:${pr.color};"></div>
+      <div class="note-title">${escapeHtml(t.title || 'Без назви')}</div>
+      <div class="note-meta">
+        <div class="note-due">📅 ${dueLabel}</div>
+        <div class="note-comments">${t.description ? '📝' : ''}</div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.innerText = s;
+  return d.innerHTML;
+}
+
+function renderBoard(){
+  return `
+    <div class="board">
+      ${STATUSES.map(st => {
+        const list = tasks.filter(t=>t.status===st.key);
+        return `
+          <div class="column">
+            <div class="column-head">
+              <div class="dot" style="background:${st.dot};"></div>
+              <h2>${st.label}</h2>
+              <div class="count">${list.length}</div>
+            </div>
+            <div class="notes-wrap">
+              ${list.length ? list.map(noteHTML).join('') : `<div class="empty-col">Порожньо. Перетягніть сюди мрії.</div>`}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderRibbon(){
+  const total = tasks.length;
+  const done = tasks.filter(t=>t.status==='done').length;
+  const overdue = tasks.filter(t=>{
+    if(t.status==='done' || !t.dueDate) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due = new Date(t.dueDate); due.setHours(0,0,0,0);
+    return due < today;
+  }).length;
+  const inprogress = tasks.filter(t=>t.status==='inprogress').length;
+  return `
+    <div class="ribbon">
+      <div class="chip"><b>${total}</b><span>усього завдань</span></div>
+      <div class="chip"><b>${inprogress}</b><span>в процесі</span></div>
+      <div class="chip"><b>${done}</b><span>завершено</span></div>
+      <div class="chip"><b style="color:${overdue>0?'#e2704c':'#f1e7cf'}">${overdue}</b><span>прострочено</span></div>
+    </div>
+  `;
+}
+
+function renderAnalytics(){
+  const total = tasks.length;
+  const done = tasks.filter(t=>t.status==='done');
+  const rate = total ? Math.round(done.length/total*100) : 0;
+
+  const durations = done
+    .filter(t=>t.completedAt && t.createdAt)
+    .map(t=> Math.max(0, daysBetween(new Date(t.createdAt), new Date(t.completedAt))) );
+  const avgDur = durations.length ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length*10)/10 : 0;
+
+  // completions per week, last 8 weeks
+  const weeks = [];
+  const now = new Date();
+  for(let i=7;i>=0;i--){
+    const start = new Date(now); start.setDate(now.getDate() - i*7 - now.getDay());
+    start.setHours(0,0,0,0);
+    const end = new Date(start); end.setDate(start.getDate()+7);
+    const count = done.filter(t=>{
+      if(!t.completedAt) return false;
+      const c = new Date(t.completedAt);
+      return c >= start && c < end;
+    }).length;
+    weeks.push({label: `${start.getDate()}.${(start.getMonth()+1).toString().padStart(2,'0')}`, count});
+  }
+  const maxCount = Math.max(1, ...weeks.map(w=>w.count));
+
+  const recentDone = done
+    .filter(t=>t.completedAt)
+    .sort((a,b)=> new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0,6);
+
+  return `
+    <div class="analytics">
+      <div class="stat-grid">
+        <div class="stat-card"><b>${total}</b><span>усього завдань</span></div>
+        <div class="stat-card"><b>${done.length}</b><span>завершено</span></div>
+        <div class="stat-card"><b>${rate}%</b><span>відсоток виконання</span></div>
+        <div class="stat-card"><b>${avgDur}</b><span>середній час виконання, днів</span></div>
+      </div>
+
+      <div class="panel-box">
+        <h3>Завершені завдання за тижнями</h3>
+        <div class="chart">
+          ${weeks.map(w => `
+            <div class="bar-col">
+              <div class="bar-value">${w.count || ''}</div>
+              <div class="bar" style="height:${(w.count/maxCount*110)+4}px;"></div>
+              <div class="bar-label">${w.label}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>Останні завершені</h3>
+        <div class="done-list">
+          ${recentDone.length ? recentDone.map(t=>{
+            const dur = t.createdAt && t.completedAt ? Math.max(0, daysBetween(new Date(t.createdAt), new Date(t.completedAt))) : null;
+            const durColor = dur===null ? '#999' : dur<=1 ? '#4caa7d' : dur<=4 ? '#3f9e9a' : dur<=8 ? '#3f7fc7' : '#2c4e9e';
+            return `<div class="done-row"><span>${escapeHtml(t.title)}</span><span class="dur" style="background:${durColor};">${dur===null?'—':dur+' дн.'}</span></div>`;
+          }).join('') : '<div class="empty-col">Ще немає завершених завдань.</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModal(){
+  if(!openTaskId) return '';
+  const t = tasks.find(x=>x.id===openTaskId);
+  if(!t) return '';
+  return `
+    <div class="overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <div class="modal-top">
+          <input class="title-input" value="${escapeHtml(t.title)}" placeholder="Назва завдання"
+            oninput="updateTaskSilent('${t.id}', {title:this.value})" />
+          <button class="close-x" onclick="closeModal()">✕</button>
+        </div>
+
+        <div class="field-label">Коментар / нотатки</div>
+        <textarea placeholder="Опишіть деталі, прогрес, думки..." oninput="updateTaskSilent('${t.id}', {description:this.value})">${escapeHtml(t.description||'')}</textarea>
+
+        <div class="field-label">Статус</div>
+        <div class="status-pills">
+          ${STATUSES.map(st => `
+            <div class="status-pill ${t.status===st.key?'active':''}" onclick="updateTask('${t.id}', {status:'${st.key}'})">${st.label}</div>
+          `).join('')}
+        </div>
+
+        <div class="row2">
+          <div>
+            <div class="field-label">Дедлайн</div>
+            <input class="date-input" type="date" value="${t.dueDate||''}" onchange="updateTask('${t.id}', {dueDate:this.value})" />
+          </div>
+          <div>
+            <div class="field-label">Пріоритет</div>
+            <div class="priority-row" style="padding-top:6px;">
+              ${Object.entries(PRIORITIES).map(([k,p]) => `
+                <div class="p-swatch ${t.priority==k?'active':''}" style="background:${p.color};" title="${p.label}" onclick="updateTask('${t.id}', {priority:${k}})"></div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="meta-footer">
+          <span>Створено: ${fmtDate(t.createdAt)}</span>
+          <span>${t.completedAt ? 'Завершено: '+fmtDate(t.completedAt) : ''}</span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="del-btn" onclick="deleteTask('${t.id}')">Видалити завдання</button>
+          <button class="done-btn" onclick="closeModal()">Готово</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettingsModal(){
+  if(!settingsOpen) return '';
+  const saved = getFirebaseConfig();
+  const configText = saved ? JSON.stringify(saved, null, 2) : '';
+  return `
+    <div class="overlay" onclick="if(event.target===this) closeSettings()">
+      <div class="modal setup-modal">
+        <div class="modal-top">
+          <h2>Підключити синхронізацію</h2>
+          <button class="close-x" onclick="closeSettings()">✕</button>
+        </div>
+        <p>Вставте конфігурацію вебзастосунку з Firebase. Вона не є паролем: доступ до завдань захищають правила бази даних і вхід через Google.</p>
+        <div class="notice">
+          У Firebase увімкніть <b>Authentication → Google</b> і створіть <b>Firestore Database</b>. У налаштуваннях проєкту відкрийте «Ваші застосунки» → Web → Config і скопіюйте весь об’єкт <b>firebaseConfig</b> разом із фігурними дужками.
+        </div>
+        <div class="field-label">Об’єкт firebaseConfig</div>
+        <textarea id="firebase-config-input" placeholder='{"apiKey":"…","authDomain":"…","projectId":"…"}'>${escapeHtml(configText)}</textarea>
+        <div id="config-error" style="color:#a5473e;font-size:12px;margin-top:7px;"></div>
+        <div class="setup-actions">
+          <button class="secondary-btn" onclick="closeSettings()">Скасувати</button>
+          <button class="done-btn" onclick="saveFirebaseConfig()">Зберегти й підключити</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeSettings(){ settingsOpen = false; render(); }
+
+function accountControls(){
+  if(firebase.user){
+    const name = firebase.user.displayName || firebase.user.email || 'Google-акаунт';
+    return `<div class="account-actions">
+      <span class="account-name" title="${escapeHtml(firebase.user.email || name)}">☁ ${escapeHtml(name)}</span>
+      <button class="account-btn connected" onclick="signOut()">Вийти</button>
+      <button class="account-btn" title="Налаштування синхронізації" onclick="settingsOpen=true;render()">⚙</button>
+    </div>`;
+  }
+  return `<div class="account-actions">
+    <button class="account-btn" onclick="settingsOpen=true;render()">⚙ Синхронізація</button>
+    <button class="account-btn ${firebase.ready?'connected':''}" onclick="signIn()">Увійти через Google</button>
+  </div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(!loaded){ app.innerHTML = '<div class="loading">Дістаю дошку зі старої шафи…</div>'; return; }
+
+  app.innerHTML = `
+    <div class="header">
+      <div class="title-block">
+        <h1>Мій куточок завдань</h1>
+        <p>Наліпки, які самі нагадують про терміни</p>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn ${activeTab==='board'?'active':''}" onclick="setTab('board')">Дошка</button>
+        <button class="tab-btn ${activeTab==='analytics'?'active':''}" onclick="setTab('analytics')">Аналітика</button>
+      </div>
+      <div class="account-actions">
+        ${accountControls()}
+        <button class="new-btn" onclick="createTask()">+ Нове завдання</button>
+      </div>
+    </div>
+
+    <div style="color:#c9bb9d;font-size:12px;margin:-8px 0 16px;">${escapeHtml(syncMessage)}</div>
+
+    ${activeTab==='board' ? renderRibbon() : ''}
+    ${activeTab==='board' ? renderBoard() : renderAnalytics()}
+    ${renderModal()}
+    ${renderSettingsModal()}
+  `;
+}
+
+function setTab(tab){ activeTab = tab; render(); }
+
+loadTasks();
+</script>
+</body>
+</html>
